@@ -25,10 +25,15 @@ mask = cv2.imread("mask_for_cars_video.png")
 #tracking
 tracker = Sort(max_age=20, min_hits=3, iou_threshold=0.3)
 
+limits = [400,297,673,297]
+totalCount = []
+
 while True:
     succcess, img = cap.read()
     imgRegion = cv2.bitwise_and(img, mask)
 
+    imgGraphics = cv2.imread("graphics.png", cv2.IMREAD_UNCHANGED)
+    img = cvzone.overlayPNG(img, imgGraphics, (0,0))
     results = model(imgRegion, stream = True)
 
     detections = np.empty((0, 5))
@@ -56,18 +61,29 @@ while True:
             if currentClasss == "car" or currentClasss == "truck" or currentClasss == "bus"\
                 or currentClasss == "motorbike" and conf > 0.3:
                 #cvzone.putTextRect(img, f'{currentClasss} {conf}', (max(0,x1), max(40,y1)), scale = 0.6, thickness = 1, offset = 3)
-                cvzone.cornerRect(img, (x1, y1, w, h), l=9, rt=5)
                 currentArray = np.array([x1,y1,x2,y2,conf])
                 detections = np.vstack((detections, currentArray))
 
     resultsTracker = tracker.update(detections)
+    cv2.line(img, (limits[0], limits[1]),(limits[2], limits[3]), (0,0,255), 5) # red line
+
     for results in resultsTracker:
         x1,y1,x2,y2, Id = results
         x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
         print(results)
         w, h = x2 - x1, y2 - y1
-        cvzone.cornerRect(img, (x1, y1, w, h), l=9, rt=2, colorR=(255,0,0))
+        cvzone.cornerRect(img, (x1, y1, w, h), l=9, rt=2, colorR=(255,0,255))
         cvzone.putTextRect(img, f'{int(Id)}', (max(0, x1), max(40, y1)), scale=2, thickness=3, offset=3)
+
+        cx, cy = x1+w//2, y1+h//2
+        cv2.circle(img, (cx,cy), 5, (255,0,255), cv2.FILLED)
+
+        if limits[0]<limits[2] and limits[1]-15<cy<limits[1]+15:
+            if totalCount.count(Id) == 0: #if this id is not already present count it, if not 0
+                totalCount.append(Id)
+                cv2.line(img, (limits[0], limits[1]), (limits[2], limits[3]), (0, 255, 0), 5)  # red line
+
+    cvzone.putTextRect(img, f' Count: {len(totalCount)}', (50, 50))
 
     cv2.imshow("Image", img)
     cv2.imshow("ImageRegion", imgRegion)
