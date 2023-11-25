@@ -3,11 +3,7 @@ import cv2
 import cvzone #to display detections
 import math #to diplsay confident values on webcam screen
 
-cap = cv2.VideoCapture("C:/Users/Andrea/Documents/GitHub/Car-Counter-AI/Videos/bikes.mp4")  # za video
-
-if not cap.isOpened():
-    print("Greška pri učitavanju videa.")
-    exit()
+cap = cv2.VideoCapture("C:/Users/Andrea/Documents/GitHub/Car-Counter-AI/Videos/cars.mp4")  # za video
 
 model = YOLO("../Yolo-Weights/yolov8n.pt")
 
@@ -22,10 +18,12 @@ classNames = ["person", "bicycle", "car", "motorbike", "aeroplane", "bus", "trai
               "microwave", "oven", "toaster", "sink", "refrigerator", "book", "clock", "vase", "scissors",
               "teddy bear", "hair drier", "toothbrush"
               ]
-
+mask = cv2.imread("mask_for_cars_video.png")
 while True:
     succcess, img = cap.read()
-    results = model(img, stream = True)
+    imgRegion = cv2.bitwise_and(img, mask)
+
+    results = model(imgRegion, stream = True)
     for r in results:
         boxes = r.boxes
         for box in boxes:
@@ -36,18 +34,22 @@ while True:
             #cv2.rectangle(img, (x1, y1), (x2, y2), (255, 0, 255), 3)
 
             w, h = x2-x1, y2-y1
-            cvzone.cornerRect(img, (x1,y1,w,h))
+
+
             #confidence
             conf = math.ceil((box.conf[0]*100))/100
-            print(conf)
+
 
             #class name
             cls = int(box.cls[0])
+            currentClasss = classNames[cls]
 
-            cvzone.putTextRect(img, f'{classNames[cls]} {conf}', (max(0,x1), max(40,y1)), scale = 1, thickness = 1)
-
-
+            if currentClasss == "car" or currentClasss == "truck" or currentClasss == "bus"\
+                or currentClasss == "motorbike" and conf > 0.3:
+                cvzone.putTextRect(img, f'{currentClasss} {conf}', (max(0,x1), max(40,y1)), scale = 0.6, thickness = 1, offset = 3)
+                cvzone.cornerRect(img, (x1, y1, w, h), l=9)
     cv2.imshow("Image", img)
+    cv2.imshow("ImageRegion", imgRegion)
     cv2.waitKey(1)
 #turns camera on
 
