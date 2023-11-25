@@ -1,4 +1,6 @@
+import numpy as np
 from ultralytics import YOLO
+from sort import *
 import cv2
 import cvzone #to display detections
 import math #to diplsay confident values on webcam screen
@@ -19,11 +21,18 @@ classNames = ["person", "bicycle", "car", "motorbike", "aeroplane", "bus", "trai
               "teddy bear", "hair drier", "toothbrush"
               ]
 mask = cv2.imread("mask_for_cars_video.png")
+
+#tracking
+tracker = Sort(max_age=20, min_hits=3, iou_threshold=0.3)
+
 while True:
     succcess, img = cap.read()
     imgRegion = cv2.bitwise_and(img, mask)
 
     results = model(imgRegion, stream = True)
+
+    detections = np.empty((0, 5))
+
     for r in results:
         boxes = r.boxes
         for box in boxes:
@@ -46,8 +55,20 @@ while True:
 
             if currentClasss == "car" or currentClasss == "truck" or currentClasss == "bus"\
                 or currentClasss == "motorbike" and conf > 0.3:
-                cvzone.putTextRect(img, f'{currentClasss} {conf}', (max(0,x1), max(40,y1)), scale = 0.6, thickness = 1, offset = 3)
-                cvzone.cornerRect(img, (x1, y1, w, h), l=9)
+                #cvzone.putTextRect(img, f'{currentClasss} {conf}', (max(0,x1), max(40,y1)), scale = 0.6, thickness = 1, offset = 3)
+                cvzone.cornerRect(img, (x1, y1, w, h), l=9, rt=5)
+                currentArray = np.array([x1,y1,x2,y2,conf])
+                detections = np.vstack((detections, currentArray))
+
+    resultsTracker = tracker.update(detections)
+    for results in resultsTracker:
+        x1,y1,x2,y2, Id = results
+        x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
+        print(results)
+        w, h = x2 - x1, y2 - y1
+        cvzone.cornerRect(img, (x1, y1, w, h), l=9, rt=2, colorR=(255,0,0))
+        cvzone.putTextRect(img, f'{int(Id)}', (max(0, x1), max(40, y1)), scale=2, thickness=3, offset=3)
+
     cv2.imshow("Image", img)
     cv2.imshow("ImageRegion", imgRegion)
     cv2.waitKey(1)
