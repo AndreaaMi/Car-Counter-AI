@@ -83,8 +83,8 @@ while True:
                 totalCount.append(Id)
                 cv2.line(img, (limits[0], limits[1]), (limits[2], limits[3]), (0, 255, 0), 5)  # red line
 
-    cvzone.putTextRect(img, f' Count: {len(totalCount)}', (50, 50))
 
+    cv2.putText(img, str(len(totalCount)),(255,100), cv2.FONT_HERSHEY_PLAIN, 5, (50,50,255), 8)
     cv2.imshow("Image", img)
     cv2.imshow("ImageRegion", imgRegion)
     cv2.waitKey(1)
